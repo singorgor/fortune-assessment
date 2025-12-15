@@ -1,0 +1,22 @@
+{
+  "name": "2026丙午·命盘运势推演录",
+  "short_name": "丙午命盘",
+  "description": "基于传统八字智慧，为你解读2026年运势趋势",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fef7ed",
+  "theme_color": "#d97706",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
