@@ -299,6 +299,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import {
   TrendingUp,
+  TrendingDown,
+  Minus,
+  Activity,
   Calendar,
   Users,
   Heart,
@@ -394,11 +397,16 @@ export default function ResultPage() {
 
   const getTrendIcon = (trend: string) => {
     switch (trend) {
-      case '上升': return '📈'
-      case '平稳': return '➡️'
-      case '波动': return '📊'
-      case '偏压力': return '📉'
-      default: return '➡️'
+      case '上升':
+        return <TrendingUp className="h-6 w-6 text-green-600" />
+      case '平稳':
+        return <Minus className="h-6 w-6 text-blue-600" />
+      case '波动':
+        return <Activity className="h-6 w-6 text-orange-600" />
+      case '偏压力':
+        return <TrendingDown className="h-6 w-6 text-red-600" />
+      default:
+        return <Minus className="h-6 w-6 text-gray-600" />
     }
   }
 
@@ -587,7 +595,7 @@ export default function ResultPage() {
                         )}
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-2xl mr-2">
+                        <span className="mr-2">
                           {getTrendIcon(domain.trend)}
                         </span>
                         <span className={`text-xl font-bold ${getScoreColor(domain.score)}`}>

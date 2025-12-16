@@ -597,7 +597,7 @@ function generateDomainContent(
   userContext: UserContext
 ) {
   const { year2026Impact, balanceType, dayMaster } = chartProfile
-  const { useMatter, strategy } = userContext
+  const { useMatter, strategy, taboos } = userContext
 
   const contentLibrary: Record<string, {
     brightSpot: string;
@@ -637,7 +637,16 @@ function generateDomainContent(
     }
   }
 
-  return contentLibrary[domain]
+  // 获取基础内容
+  let content = contentLibrary[domain]
+
+  // 根据忌事进行个性化调整
+  content = adjustContentForTaboos(content, domain, taboos)
+
+  // 根据处境策略进行个性化调整
+  content = adjustContentForStrategy(content, domain, strategy, useMatter)
+
+  return content
 }
 
 /**
@@ -781,13 +790,16 @@ function generateMonths(chartProfile: ChartProfile, userContext: UserContext) {
   for (let i = 0; i < 12; i++) {
     const monthNum = i + 1
     const solarTerm = monthSolarTerms[i * 2] // 每月两个节气，取第一个
+    const nextSolarTerm = monthSolarTerms[i * 2 + 1] // 第二个节气
 
     // 根据命盘和流年影响计算月运势
     const monthData = calculateMonthlyFortune(
       monthNum,
       chartProfile,
       userContext,
-      year2026Impact
+      year2026Impact,
+      solarTerm,
+      nextSolarTerm
     )
 
     months.push({
@@ -806,19 +818,25 @@ function calculateMonthlyFortune(
   monthNum: number,
   chartProfile: ChartProfile,
   userContext: UserContext,
-  year2026Impact: any
+  year2026Impact: any,
+  solarTerm: string,
+  nextSolarTerm: string
 ) {
   const { dayMaster, balanceType } = chartProfile
-  const { useMatter, strategy } = userContext
+  const { useMatter, strategy, taboos } = userContext
 
   // 计算月份基础分数（基于全年运势的月度分布）
-  const baseScore = calculateMonthlyScore(monthNum, year2026Impact, balanceType)
+  const baseScore = calculateMonthlyScore(monthNum, year2026Impact, balanceType, solarTerm)
+
+  // 根据忌事调整分数
+  const tabooAdjustment = calculateTabooAdjustment(monthNum, taboos)
+  const adjustedScore = Math.max(35, Math.min(100, baseScore + tabooAdjustment))
 
   // 确定月份标签
-  const tag = generateMonthTag(baseScore, monthNum, useMatter)
+  const tag = generateMonthTag(adjustedScore, monthNum, useMatter)
 
-  // 生成月度主题
-  const theme = generateMonthTheme(tag, monthNum, useMatter, dayMaster)
+  // 生成月度主题（融入节气信息）
+  const theme = generateMonthTheme(tag, monthNum, useMatter, dayMaster, solarTerm, nextSolarTerm)
 
   // 生成提醒事项
   const reminders = generateMonthReminders(tag, monthNum, useMatter, balanceType)
@@ -831,9 +849,10 @@ function calculateMonthlyFortune(
 
   return {
     tag,
+    score: adjustedScore, // 添加分数到返回值
     theme,
-    reminders,
-    goodFor,
+    reminders: adjustRemindersForTaboos(reminders, taboos), // 根据忌事调整提醒
+    goodFor: adjustGoodForForTaboos(goodFor, taboos), // 根据忌事调整宜做的事
     methodLite
   }
 }
@@ -844,7 +863,8 @@ function calculateMonthlyFortune(
 function calculateMonthlyScore(
   monthNum: number,
   year2026Impact: any,
-  balanceType: string
+  balanceType: string,
+  solarTerm: string
 ): number {
   // 基础分数（基于全年影响强度）
   let score = 50 + year2026Impact.strengthLevel * 0.4
@@ -852,6 +872,10 @@ function calculateMonthlyScore(
   // 季节性调整
   const seasonalBonus = getSeasonalBonus(monthNum, year2026Impact.type)
   score += seasonalBonus
+
+  // 节气影响（特定节气对不同命局的影响）
+  const solarTermBonus = getSolarTermBonus(solarTerm, balanceType)
+  score += solarTermBonus
 
   // 月度波动（减少随机性，增加规律性）
   const monthlyPattern = Math.sin((monthNum / 12) * Math.PI * 2) * 10
@@ -940,7 +964,9 @@ function generateMonthTheme(
   tag: string,
   monthNum: number,
   useMatter: string,
-  dayMaster: string
+  dayMaster: string,
+  solarTerm: string,
+  nextSolarTerm: string
 ): string {
   const themeLibrary: Record<string, Record<string, string[]>> = {
     '吉': {
@@ -974,7 +1000,11 @@ function generateMonthTheme(
   }
 
   const themes = themeLibrary[tag]?.[useMatter] || ['按部就班，稳扎稳打']
-  return themes[monthNum % themes.length]
+  const baseTheme = themes[monthNum % themes.length]
+
+  // 融入节气信息
+  const solarTermNote = getSolarTermThemeNote(solarTerm, nextSolarTerm, tag)
+  return `${baseTheme}。${solarTermNote}`
 }
 
 /**
@@ -1152,4 +1182,277 @@ function generateBasis() {
       • 请理性看待，切勿过度迷信
     `
   }
+}
+
+/**
+ * 根据忌事计算月度分数调整
+ */
+function calculateTabooAdjustment(monthNum: number, taboos: string[]): number {
+  if (!taboos || taboos.length === 0) return 0
+
+  // 定义忌事与月份的关系（某些忌事在某些月份影响更大）
+  const tabooMonthMap: { [key: string]: { month: number, impact: number }[] } = {
+    '重大投资': [
+      { month: 4, impact: -8 }, // 4月投资风险较高
+      { month: 10, impact: -6 } // 10月市场波动
+    ],
+    '情感决策': [
+      { month: 7, impact: -5 }, // 7月情感波动
+      { month: 11, impact: -4 } // 11月关系考验
+    ],
+    '换工作': [
+      { month: 3, impact: -7 }, // 3月事业变动期
+      { month: 9, impact: -5 }  // 9月职场考验
+    ],
+    '搬家': [
+      { month: 2, impact: -4 }, // 2月环境不稳定
+      { month: 8, impact: -3 }  // 8月动土不宜
+    ],
+    '签约': [
+      { month: 6, impact: -6 }, // 6月文书风险
+      { month: 12, impact: -4 } // 12月年底不宜
+    ]
+  }
+
+  let totalAdjustment = 0
+
+  taboos.forEach(taboo => {
+    if (tabooMonthMap[taboo]) {
+      tabooMonthMap[taboo].forEach(({ month, impact }) => {
+        if (month === monthNum) {
+          totalAdjustment += impact
+        }
+      })
+    } else {
+      // 其他忌事的一般影响
+      totalAdjustment += -2
+    }
+  })
+
+  return totalAdjustment
+}
+
+/**
+ * 根据忌事调整月度提醒
+ */
+function adjustRemindersForTaboos(reminders: string[], taboos: string[]): string[] {
+  if (!taboos || taboos.length === 0) return reminders
+
+  const adjustedReminders = [...reminders]
+
+  // 根据忌事添加特定提醒
+  taboos.forEach(taboo => {
+    switch (taboo) {
+      case '重大投资':
+        adjustedReminders.push('本月避免重大财务决策，谨慎投资')
+        break
+      case '情感决策':
+        adjustedReminders.push('感情问题宜静不宜动，避免冲动决定')
+        break
+      case '换工作':
+        adjustedReminders.push('工作宜守不宜变，暂缓跳槽计划')
+        break
+      case '搬家':
+        adjustedReminders.push('居住环境宜保持稳定，暂缓搬迁计划')
+        break
+      case '签约':
+        adjustedReminders.push('合同文书要特别谨慎，避免口头承诺')
+        break
+      default:
+        adjustedReminders.push(`本月需特别注意：避免${taboo}相关事宜`)
+    }
+  })
+
+  return adjustedReminders.slice(0, 4) // 最多返回4条提醒
+}
+
+/**
+ * 根据忌事调整宜做的事
+ */
+function adjustGoodForForTaboos(goodFor: string[], taboos: string[]): string[] {
+  if (!taboos || taboos.length === 0) return goodFor
+
+  // 过滤掉与忌事冲突的"宜做"事项
+  const tabooConflictMap: { [key: string]: string[] } = {
+    '重大投资': ['投资理财', '商业谈判', '创业合作'],
+    '情感决策': ['感情发展', '社交聚会', '人际拓展'],
+    '换工作': ['事业发展', '项目启动', '学习进修'],
+    '搬家': ['环境改善', '装修装饰', '风水调整'],
+    '签约': ['合同签订', '法律事务', '文书处理']
+  }
+
+  let adjustedGoodFor = [...goodFor]
+
+  taboos.forEach(taboo => {
+    if (tabooConflictMap[taboo]) {
+      adjustedGoodFor = adjustedGoodFor.filter(item =>
+        !tabooConflictMap[taboo].some(conflict => item.includes(conflict))
+      )
+    }
+  })
+
+  // 如果过滤后太少了，添加一些安全的事项
+  if (adjustedGoodFor.length < 2) {
+    adjustedGoodFor.push('修身养性', '学习充电', '健身运动', '整理环境')
+  }
+
+  return adjustedGoodFor.slice(0, 3) // 最多返回3条宜做事项
+}
+
+/**
+ * 获取节气对月度分数的影响
+ */
+function getSolarTermBonus(solarTerm: string, balanceType: string): number {
+  // 不同节气对不同体质（旺衰）的影响
+  const solarTermBalanceBonus: Record<string, Record<string, number>> = {
+    '立春': { '身旺': 3, '身弱': 5, '中和': 4 }, // 木生发，利弱者
+    '惊蛰': { '身旺': 2, '身弱': 4, '中和': 3 },
+    '清明': { '身旺': 1, '身弱': 3, '中和': 2 },
+    '立夏': { '身旺': 4, '身弱': 2, '中和': 3 }, // 火旺，利强者
+    '芒种': { '身旺': 3, '身弱': 1, '中和': 2 },
+    '小暑': { '身旺': 5, '身弱': 0, '中和': 3 },
+    '立秋': { '身旺': 2, '身弱': 4, '中和': 3 }, // 金收敛，利弱者
+    '白露': { '身旺': 1, '身弱': 3, '中和': 2 },
+    '寒露': { '身旺': 0, '身弱': 2, '中和': 1 },
+    '立冬': { '身旺': 1, '身弱': 3, '中和': 2 }, // 水收藏，利弱者
+    '大雪': { '身旺': 0, '身弱': 2, '中和': 1 },
+    '小寒': { '身旺': 2, '身弱': 4, '中和': 3 }
+  }
+
+  return solarTermBalanceBonus[solarTerm]?.[balanceType] || 0
+}
+
+/**
+ * 获取节气主题提示
+ */
+function getSolarTermThemeNote(solarTerm: string, nextSolarTerm: string, tag: string): string {
+  const solarTermNotes: Record<string, string> = {
+    '立春': tag === '吉' ? '立春之际，万物复苏，正是奋发图强之时' : '立春时节，阳气初动，宜顺应天时，谨慎行事',
+    '惊蛰': tag === '吉' ? '惊蛰春雷，唤醒生机，事业爱情双丰收' : '惊蛰多变动，需保持冷静，避免冲动',
+    '清明': tag === '吉' ? '清明时节，天地清明，思路清晰，办事顺遂' : '清明思亲，情绪易波动，需调整心态',
+    '立夏': tag === '吉' ? '立夏火旺，精力充沛，正是大展拳脚之际' : '夏火炎炎，易急躁，需修身养性',
+    '芒种': tag === '吉' ? '芒种时节，忙着播种，未来可期' : '芒种忙种，劳心劳力，注意休息',
+    '小暑': tag === '吉' ? '小暑虽热但热情高涨，贵人相助' : '暑气蒸腾，易烦躁，需防小人',
+    '立秋': tag === '吉' ? '立秋收获，前努力将见成果' : '秋意渐浓，需收敛心神，稳扎稳打',
+    '白露': tag === '吉' ? '白露为霜，心境澄明，智慧增长' : '露水渐凉，需注意身体，防感冒',
+    '寒露': tag === '吉' ? '寒露不寒，暖意融融，人际和谐' : '寒气袭人，需添衣保暖，收敛锋芒',
+    '立冬': tag === '吉' ? '立冬藏福，积累实力，为来年做准备' : '冬意渐浓，宜静不宜动，等待时机',
+    '大雪': tag === '吉' ? '大雪兆丰年，困境中藏转机' : '雪天路滑，行事需谨慎，避免冒险',
+    '小寒': tag === '吉' ? '小寒不寒，温暖如春，逆势上扬' : '寒气逼人，需加强防护，保重身体'
+  }
+
+  const baseNote = solarTermNotes[solarTerm] || '时节转换，顺应自然，保持平和心态'
+
+  if (nextSolarTerm && Math.random() > 0.5) {
+    return `${baseNote}，即将迎来${nextSolarTerm}，需提前准备。`
+  }
+
+  return baseNote
+}
+
+/**
+ * 根据忌事调整领域内容
+ */
+function adjustContentForTaboos(
+  content: any,
+  domain: string,
+  taboos: string[]
+): any {
+  if (!taboos || taboos.length === 0) return content
+
+  const domainTabooMap: Record<string, Record<string, { brightSpot: string, pitfall: string }>> = {
+    '事业': {
+      '重大投资': {
+        brightSpot: content.brightSpot + '，但需避免重大投资决策',
+        pitfall: '投资风险高企，易导致重大损失。' + (content.pitfall || '')
+      },
+      '换工作': {
+        brightSpot: content.brightSpot + '，当前工作环境较为有利',
+        pitfall: '工作变动不利，易陷入被动。' + (content.pitfall || '')
+      }
+    },
+    '财运': {
+      '重大投资': {
+        brightSpot: content.brightSpot + '，收入稳步增长',
+        pitfall: '投资失利风险高，保守为上。' + (content.pitfall || '')
+      }
+    },
+    '婚恋': {
+      '情感决策': {
+        brightSpot: content.brightSpot + '，感情稳定发展',
+        pitfall: '易感情用事，做出错误判断。' + (content.pitfall || '')
+      }
+    }
+  }
+
+  taboos.forEach(taboo => {
+    if (domainTabooMap[domain]?.[taboo]) {
+      content = { ...content, ...domainTabooMap[domain][taboo] }
+    }
+  })
+
+  return content
+}
+
+/**
+ * 根据处境策略调整内容
+ */
+function adjustContentForStrategy(
+  content: any,
+  domain: string,
+  strategy: string,
+  useMatter: string
+): any {
+  const strategyAdjustments: Record<string, Record<string, any>> = {
+    '积极进取': {
+      '事业': {
+        actions: [...(content.actions || []), '主动承担重要项目', '展现领导才能', '扩大社交圈'],
+        brightSpot: content.brightSpot + '，正是大展拳脚之时'
+      },
+      '财运': {
+        actions: [...(content.actions || []), '寻找投资机会', '开拓副业渠道', '提升理财技能'],
+        brightSpot: content.brightSpot + '，财运亨通'
+      }
+    },
+    '保守稳健': {
+      '事业': {
+        actions: [...(content.actions || []), '稳扎稳打，积累经验', '维护现有客户关系', '提升专业技能'],
+        brightSpot: content.brightSpot + '，平稳发展'
+      },
+      '财运': {
+        actions: [...(content.actions || []), '稳健理财，避免风险', '建立应急基金', '多元化配置'],
+        brightSpot: content.brightSpot + '，财运稳定'
+      }
+    },
+    '灵活变通': {
+      '事业': {
+        actions: [...(content.actions || []), '适应市场变化', '学习新技能', '建立人脉网络'],
+        brightSpot: content.brightSpot + '，机会多多'
+      },
+      '人际': {
+        actions: [...(content.actions || []), '主动沟通交流', '处理复杂关系', '寻找合作机会'],
+        brightSpot: content.brightSpot + '，人际关系和谐'
+      }
+    },
+    '深思熟虑': {
+      '事业': {
+        actions: [...(content.actions || []), '全面评估机会', '制定长远计划', '咨询专业意见'],
+        brightSpot: content.brightSpot + '，决策更为明智'
+      },
+      '财运': {
+        actions: [...(content.actions || []), '深入研究投资', '理性分析市场', '制定详细预算'],
+        brightSpot: content.brightSpot + '，理财更加精准'
+      }
+    }
+  }
+
+  const adjustment = strategyAdjustments[strategy]?.[domain]
+  if (adjustment) {
+    content = {
+      ...content,
+      ...adjustment
+    }
+  }
+
+  return content
 }

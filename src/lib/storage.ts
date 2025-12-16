@@ -53,7 +53,8 @@ export class ClientStorage {
         data.birthInfo.day,
         data.birthInfo.hour,
         data.birthInfo.minute,
-        data.birthInfo.isHourUnknown
+        data.birthInfo.isHourUnknown,
+        data.birthInfo.timezone
       )
 
       // 生成报告
@@ -145,7 +146,8 @@ export function createLocalStorage() {
         data.birthInfo.day,
         data.birthInfo.hour,
         data.birthInfo.minute,
-        data.birthInfo.isHourUnknown
+        data.birthInfo.isHourUnknown,
+        data.birthInfo.timezone
       )
       const report = generateReport(chartProfile, data.situation)
 
