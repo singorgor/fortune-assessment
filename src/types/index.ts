@@ -24,7 +24,7 @@ export interface ChartProfile {
   }
   dayMaster: HeavenlyStem
   fiveElements: Record<FiveElement, number>
-  balanceType: '偏强' | '偏弱' | '均衡'
+  balanceType: '过旺' | '偏强' | '中和' | '偏弱' | '过弱'
   tenGodTop3: Array<{
     name: TenGod
     weight: number
@@ -33,8 +33,10 @@ export interface ChartProfile {
   favorableElements: FiveElement[]
   unfavorableElements: FiveElement[]
   year2026Impact: {
-    type: '助力' | '消耗' | '压力' | '机会'
+    type: '大助' | '助力' | '消耗' | '压力' | '机会' | '挑战'
     briefReason: string
+    detailedAnalysis: string
+    strengthLevel: number
   }
   isHourUnknown: boolean
 }

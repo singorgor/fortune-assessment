@@ -73,11 +73,23 @@ const getDayMasterExplanation = (dayMaster: string) => {
 // 格局解释函数 - 增强版，包含专业术语解释
 const getBalanceTypeExplanation = (balanceType: string) => {
   const explanations: Record<string, string> = {
+    '过旺': `<span class="font-semibold">您的核心能量极其旺盛，如滔天巨浪势不可挡。这意味着您拥有强大的行动力和影响力，但要警惕物极必反。</span><br/><br/>
+命理解读：<br/>
+• 什么是过旺格局：您的八字日主得令、得势、得地，五行力量极度强盛，形成身旺过头的命格<br/>
+• 为什么形成此格局：您的生辰八字中，帮扶日主的五行力量占据绝对优势<br/>
+• 过旺玄机：过旺者急需克泄耗，需要通过官杀制衡、食伤泄秀、财星耗身来达到平衡，否则容易过犹不及`,
+
     '偏强': `<span class="font-semibold">您的核心能量充沛，如同大树扎根沃土。这意味着您有足够的能力去把握机会，但要注意避免过于强势，保持谦逊。</span><br/><br/>
 命理解读：<br/>
 • 什么是身强格局：您的八字日主得令、得势、得地，五行力量偏强，形成身强的命格<br/>
 • 为什么形成此格局：您的生辰八字中，帮扶日主的五行力量较多，克制日主的力量相对较弱<br/>
 • 身强玄机：身强者宜泄宜克，需要通过食伤泄秀或官杀制衡来达到命局平衡，代表您天生具备较强的把握机遇能力`,
+
+    '中和': `<span class="font-semibold">您的核心能量平衡协调，如春风化雨般自然。这意味着您能够灵活应对各种情况，处事得当，适应性极佳。</span><br/><br/>
+命理解读：<br/>
+• 什么是中和格局：您的八字日主力量适中，五行配置相对均衡，形成中和的理想命格<br/>
+• 为什么形成此格局：您的生辰八字中，帮扶与克制日主的力量相对平衡，五行流转有情<br/>
+• 中和玄机：中和者为贵，无需特别调候就能适应环境变化，代表您具备处事得当的天然智慧，是上等命格`,
 
     '偏弱': `<span class="font-semibold">您的核心能量相对温和，如同需要精心呵护的花木。这意味着您更需借助外力支持，贵人运对您尤为重要。</span><br/><br/>
 命理解读：<br/>
@@ -85,17 +97,17 @@ const getBalanceTypeExplanation = (balanceType: string) => {
 • 为什么形成此格局：您的生辰八字中，克制日主的五行力量较多，帮扶日主的力量相对不足<br/>
 • 身弱玄机：身弱者宜帮扶，需要通过印星生扶或比劫相助来增强命局，代表您需要借助外力方能成就大业`,
 
-    '均衡': `<span class="font-semibold">您的核心能量平衡协调，如春风化雨般自然。这意味着您能够灵活应对各种情况，处事得当。</span><br/><br/>
+    '过弱': `<span class="font-semibold">您的核心能量较为不足，如风中残烛需要呵护。这意味着您要特别注重保养，寻求贵人相助，循序渐进积累力量。</span><br/><br/>
 命理解读：<br/>
-• 什么是中和格局：您的八字日主力量适中，五行配置相对均衡，形成中和的理想命格<br/>
-• 为什么形成此格局：您的生辰八字中，帮扶与克制日主的力量相对平衡，五行流转有情<br/>
-• 中和玄机：中和者为贵，无需特别调候就能适应环境变化，代表您具备处事得当的天然智慧`
+• 什么是过弱格局：您的八字日主严重失令、失势、失地，五行力量极度衰弱<br/>
+• 为什么形成此格局：您的生辰八字中，克制日主的五行力量占据绝对优势，帮扶力量严重不足<br/>
+• 过弱玄机：过弱者急需生扶，需要印星通关、比劫相助，先固本培元再图发展，切不可急功近利`
   }
   return explanations[balanceType] || '您的能量状态独特，需要在具体分析中了解。'
 }
 
 // 影响解释函数 - 增强版，包含流年神煞和十神关系
-const getImpactExplanation = (dayMaster: string, impactType: string) => {
+const getImpactExplanation = (dayMaster: string, impactType: string, detailedAnalysis?: string) => {
   const elementMap: Record<string, string> = {
     '甲': '木', '乙': '木',
     '丙': '火', '丁': '火',
@@ -116,11 +128,23 @@ const getImpactExplanation = (dayMaster: string, impactType: string) => {
   const tenGodRelation = tenGodMap[dayMaster] || '丙火为伤官'
 
   const impactExplanations: Record<string, string> = {
-    '助力': `<span class="font-semibold">${element}命遇到丙午火年，${tenGodRelation}，形成食伤泄秀或比肩助力的格局。</span><br/><br/>
+    '大助': `<span class="font-semibold">${element}命遇到丙午火年，${tenGodRelation}，形成天大的助力格局。</span><br/><br/>
+命理解读：<br/>
+• 流年天机：2026年丙午火与您的日主形成完美相助关系，如同久旱逢甘露<br/>
+• 十神玄机：${tenGodRelation}，代表此年得到上天眷顾，运势如虹<br/>
+• 运势推演：这是千载难逢的流年大助，让您在2026年如龙得水，要大胆把握机会`,
+
+    '助力': `<span class="font-semibold">${element}命遇到丙午火年，${tenGodRelation}，形成助力的格局。</span><br/><br/>
 命理解读：<br/>
 • 流年天机：2026年丙午火与您的日主形成相生关系，如同植物得到阳光滋养<br/>
 • 十神玄机：${tenGodRelation}，代表此年利于发挥才华、展现能力<br/>
 • 运势推演：这是流年用神到位的表现，让您在2026年如虎添翼，要抓住机会展现才能`,
+
+    '机会': `<span class="font-semibold">${element}命遇到丙午火年，${tenGodRelation}，形成新的运势格局。</span><br/><br/>
+命理解读：<br/>
+• 流年天机：2026年丙午火为您带来新的可能性，如同开启一扇新的大门<br/>
+• 十神玄机：${tenGodRelation}，代表此年会有新的机遇和挑战出现<br/>
+• 运势推演：要保持开放的心态，勇于尝试新事物，把握流年带来的转机`,
 
     '消耗': `<span class="font-semibold">${element}命遇到丙午火年，${tenGodRelation}，形成身弱泄气的格局。</span><br/><br/>
 命理解读：<br/>
@@ -128,20 +152,27 @@ const getImpactExplanation = (dayMaster: string, impactType: string) => {
 • 十神玄机：${tenGodRelation}，代表此年需要您持续输出精力来把握机会<br/>
 • 运势推演：这并非坏事，而是提醒您要劳逸结合，及时补充能量，做好时间管理`,
 
-    '压力': `<span class="font-semibold">${element}命遇到丙午火年，${tenGodRelation}，形成官杀克身或财星耗身的格局。</span><br/><br/>
+    '压力': `<span class="font-semibold">${element}命遇到丙午火年，${tenGodRelation}，形成官杀克身的格局。</span><br/><br/>
 命理解读：<br/>
 • 流年天机：2026年丙午火对您的日主形成挑战，如同烈日考验植物<br/>
 • 十神玄机：${tenGodRelation}，代表此年会有压力但也是成长的机会<br/>
 • 运势推演：这种压力会让您成长，但需要调整心态，化压力为动力，注意调节身心`,
 
-    '机会': `<span class="font-semibold">${element}命遇到丙午火年，${tenGodRelation}，形成新的运势格局。</span><br/><br/>
+    '挑战': `<span class="font-semibold">${element}命遇到丙午火年，${tenGodRelation}，形成挑战与机遇并存的格局。</span><br/><br/>
 命理解读：<br/>
-• 流年天机：2026年丙午火为您带来新的可能性，如同开启一扇新的大门<br/>
-• 十神玄机：${tenGodRelation}，代表此年会有新的机遇和挑战出现<br/>
-• 运势推演：要保持开放的心态，勇于尝试新事物，把握流年带来的转机`
+• 流年天机：2026年丙午火考验您的智慧和韧性，如同千锤百炼<br/>
+• 十神玄机：${tenGodRelation}，代表此年需要您迎难而上，突破自我<br/>
+• 运势推演：挑战背后隐藏着机遇，熬过考验就能迎来转机，需要毅力和智慧并存`
   }
 
-  return impactExplanations[impactType] || '2026年的火局将对您产生独特的影响，需要在具体实践中体会。'
+  const baseExplanation = impactExplanations[impactType] || '2026年的火局将对您产生独特的影响，需要在具体实践中体会。'
+
+  // 如果有详细分析，追加在后面
+  if (detailedAnalysis) {
+    return baseExplanation + `<br/><br/><strong>详细分析：</strong>${detailedAnalysis}`
+  }
+
+  return baseExplanation
 }
 
 // 领域运势专业解读函数
@@ -461,7 +492,7 @@ export default function ResultPage() {
                     </div>
                     <div
                       className="text-gray-700 text-sm leading-relaxed"
-                      dangerouslySetInnerHTML={{ __html: getImpactExplanation(chartProfile.dayMaster, chartProfile.year2026Impact.type) }}
+                      dangerouslySetInnerHTML={{ __html: getImpactExplanation(chartProfile.dayMaster, chartProfile.year2026Impact.type, chartProfile.year2026Impact.detailedAnalysis) }}
                     />
                   </div>
                 </div>

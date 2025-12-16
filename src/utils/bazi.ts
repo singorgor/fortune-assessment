@@ -202,20 +202,36 @@ export function analyzeFiveElements(pillars: ChartProfile['pillars']): Record<Fi
 }
 
 /**
- * 分析旺衰
+ * 分析旺衰 - 增强版算法
  */
-export function analyzeBalance(elements: Record<FiveElement, number>): '偏强' | '偏弱' | '均衡' {
+export function analyzeBalance(elements: Record<FiveElement, number>): '偏强' | '偏弱' | '中和' | '过旺' | '过弱' {
   const values = Object.values(elements)
   const max = Math.max(...values)
   const min = Math.min(...values)
   const avg = values.reduce((a, b) => a + b, 0) / values.length
 
-  // 如果最大值比平均值高出很多，则为偏强
-  if (max > avg * 1.5) return '偏强'
-  // 如果最小值比平均值低很多，则为偏弱
-  if (min < avg * 0.7) return '偏弱'
+  // 计算五行力量的离散程度
+  const variance = values.reduce((acc, val) => acc + Math.pow(val - avg, 2), 0) / values.length
+  const stdDev = Math.sqrt(variance)
 
-  return '均衡'
+  // 计算日主同类的力量总和（需要在调用时传入日主五行）
+  // 这里先简化为整体分析
+  const totalStrength = values.reduce((a, b) => a + b, 0)
+
+  // 更精确的旺衰判断
+  if (max > avg * 2.0 && stdDev > avg * 0.8) {
+    return '过旺' // 某一五行极度旺盛
+  } else if (max > avg * 1.5 && stdDev > avg * 0.5) {
+    return '偏强' // 整体偏强
+  } else if (min < avg * 0.4 && stdDev > avg * 0.6) {
+    return '过弱' // 某一五行极度衰弱
+  } else if (min < avg * 0.7 && stdDev > avg * 0.3) {
+    return '偏弱' // 整体偏弱
+  } else if (stdDev < avg * 0.3) {
+    return '中和' // 五行相对平衡
+  }
+
+  return '中和' // 默认平衡状态
 }
 
 /**
@@ -290,13 +306,13 @@ function getTenGodBrief(tenGod: TenGod): string {
 export function analyzeFavorableElements(
   elements: Record<FiveElement, number>,
   dayMaster: HeavenlyStem,
-  balanceType: '偏强' | '偏弱' | '均衡'
+  balanceType: '过旺' | '偏强' | '中和' | '偏弱' | '过弱'
 ): { favorable: FiveElement[], unfavorable: FiveElement[] } {
   const dayElement = heavenlyStemElements[dayMaster]
   const favorable: FiveElement[] = []
   const unfavorable: FiveElement[] = []
 
-  if (balanceType === '偏强') {
+  if (balanceType === '过旺' || balanceType === '偏强') {
     // 身强需要克泄耗
     const 克 = getControlElement(dayElement)
     const 泄 = getOutputElement(dayElement)
@@ -305,7 +321,7 @@ export function analyzeFavorableElements(
     favorable.push(克, 泄, 耗)
     // 同类为忌
     unfavorable.push(dayElement, getSameElement(dayElement))
-  } else if (balanceType === '偏弱') {
+  } else if (balanceType === '过弱' || balanceType === '偏弱') {
     // 身弱需要生助
     const 生 = getSupportElement(dayElement)
     const 助 = dayElement
@@ -318,7 +334,7 @@ export function analyzeFavorableElements(
       getWeakenElement(dayElement)
     )
   } else {
-    // 均衡则根据季节（这里简化处理）
+    // 中和则根据季节（这里简化处理）
     favorable.push(dayElement, getSupportElement(dayElement))
   }
 
@@ -389,42 +405,114 @@ function getWeakenElement(element: FiveElement): FiveElement {
 }
 
 /**
- * 分析2026丙午流年影响
+ * 分析2026丙午流年影响 - 增强版算法
  */
 export function analyzeYear2026Impact(
   chartProfile: Pick<ChartProfile, 'pillars' | 'dayMaster' | 'fiveElements' | 'balanceType'>
-): { type: '助力' | '消耗' | '压力' | '机会', briefReason: string } {
-  const { dayMaster, fiveElements } = chartProfile
+): {
+  type: '大助' | '助力' | '消耗' | '压力' | '机会' | '挑战',
+  briefReason: string,
+  detailedAnalysis: string,
+  strengthLevel: number // 0-100的影响强度
+} {
+  const { dayMaster, fiveElements, balanceType } = chartProfile
   const dayElement = heavenlyStemElements[dayMaster]
 
-  // 丙午都是火
+  // 2026年天干丙火，地支午火，火势极旺
   const yearElement = '火'
 
-  // 分析火对日主的影响
+  // 计算命局中火的现有力量
+  const fireStrength = fiveElements['火']
+  const avgStrength = Object.values(fiveElements).reduce((a, b) => a + b, 0) / 5
+
+  // 分析火对日主的生克关系
+  let type: '大助' | '助力' | '消耗' | '压力' | '机会' | '挑战'
+  let briefReason: string
+  let detailedAnalysis: string
+  let strengthLevel: number
+
+  // 1. 火与日主相同（比肩助力）
   if (dayElement === yearElement) {
-    return {
-      type: '助力',
-      briefReason: '丙午火助身，自信心增强，表现欲强，宜主动出击'
-    }
-  } else if (getSupportElement(dayElement) === yearElement) {
-    return {
-      type: '助力',
-      briefReason: '丙午火生身，得贵人相助，学习进步，内外兼修'
-    }
-  } else if (getOutputElement(dayElement) === yearElement) {
-    return {
-      type: '消耗',
-      briefReason: '丙午火为泄，多表达多付出，但需注意精力分配'
-    }
-  } else if (getControlElement(dayElement) === yearElement) {
-    return {
-      type: '压力',
-      briefReason: '丙午火克身，面临挑战，需以柔克刚，化解压力'
-    }
-  } else {
-    return {
-      type: '机会',
-      briefReason: '丙午火为财，机遇增多，但需主动把握，防范风险'
+    if (balanceType === '过弱' || balanceType === '偏弱') {
+      type = '大助'
+      briefReason = '丙午火助身，弱逢生扶，如旱苗得雨，运势大振'
+      detailedAnalysis = '您的日主属火，2026年丙午火年形成比肩助力格局。对于身弱的您来说，这是难得的帮扶之年，火势助身，自信心和行动力都显著增强，宜把握机遇大展拳脚。'
+      strengthLevel = 85 + (fireStrength > avgStrength ? 5 : 0)
+    } else {
+      type = '助力'
+      briefReason = '丙午火助身，朋友相助，合作共赢'
+      detailedAnalysis = '火日主逢火年，得比肩相助，人缘佳，朋友助力明显。但需注意避免过度自信，防范朋友间的竞争关系。'
+      strengthLevel = 70 + (balanceType === '过旺' ? -10 : 5)
     }
   }
+  // 2. 火生日主（印星生身）
+  else if (getSupportElement(dayElement) === yearElement) {
+    if (balanceType === '偏弱' || balanceType === '过弱') {
+      type = '大助'
+      briefReason = '丙午火生身，贵人提携，学业事业双丰收'
+      detailedAnalysis = '火生您的日主，形成印星生身格局。对于身弱的您来说，这是贵人年，长上、老师、长辈的提携让您如虎添翼。学习运强，适合考证、进修。'
+      strengthLevel = 80 + (fireStrength < avgStrength ? 10 : 0)
+    } else {
+      type = '助力'
+      briefReason = '丙午火生身，内在充实，修养提升'
+      detailedAnalysis = '印星透干，内在充实，学习吸收能力强，思虑周全。但身强者要避免依赖心理，需主动出击。'
+      strengthLevel = 65
+    }
+  }
+  // 3. 日主生火（食伤泄秀）
+  else if (getOutputElement(dayElement) === yearElement) {
+    if (balanceType === '过旺' || balanceType === '偏强') {
+      type = '助力'
+      briefReason = '丙午火为泄，才华展现，表达创造力强'
+      detailedAnalysis = '您的日主生丙午火，形成食伤泄秀格局。对于身强的您，这是发挥才华的绝佳年份，创意、表达、创作能力都处于巅峰状态。'
+      strengthLevel = 75
+    } else {
+      type = '消耗'
+      briefReason = '丙午火为泄，多付出多收获，需注意精力管理'
+      detailedAnalysis = '食伤透干，今年需要大量输出精力和时间在表达、创作上。虽然能展现才华，但要注意劳逸结合，避免过度消耗。'
+      strengthLevel = 60 + (balanceType === '过弱' ? -10 : 0)
+    }
+  }
+  // 4. 火克日主（官星克身）
+  else if (getControlElement(dayElement) === yearElement) {
+    if (balanceType === '过旺' || balanceType === '偏强') {
+      type = '机会'
+      briefReason = '丙午火克身，压力转化动力，事业有成'
+      detailedAnalysis = '官星透干，对于身强的您来说，这是事业年。适度的压力能让您保持警觉，把握住就能事业晋升。但要注意与领导的关系。'
+      strengthLevel = 70
+    } else {
+      type = '压力'
+      briefReason = '丙午火克身，挑战较大，需以柔克刚'
+      detailedAnalysis = '官星克身，对于身弱的您来说压力较大。工作、健康方面都有挑战。建议以柔克刚，寻求贵人化解，切忌硬抗。'
+      strengthLevel = 45 + (balanceType === '过弱' ? -10 : 0)
+    }
+  }
+  // 5. 日主克火（财星被克）
+  else {
+    if (balanceType === '过旺' || balanceType === '偏强') {
+      type = '机会'
+      briefReason = '丙午火为财，财运亨通，把握商机'
+      detailedAnalysis = '火为您的财星，对于身强的您这是财运年。正财偏财都有机会，但要防范破财风险，投资需谨慎。'
+      strengthLevel = 75
+    } else {
+      type = '挑战'
+      briefReason = '丙午火为财，财多身弱，需防破财'
+      detailedAnalysis = '财星透干但身弱担不起财，容易出现财多身弱的局面。建议稳健理财，避免投机，寻求合作伙伴共担风险。'
+      strengthLevel = 50
+    }
+  }
+
+  // 根据命局中火的原始力量调整影响强度
+  if (fireStrength > avgStrength * 1.5) {
+    strengthLevel += 10 // 命局火旺，流年影响加倍
+    detailedAnalysis += '您的命局中火本就旺盛，流年火上浇火，影响更为显著。'
+  } else if (fireStrength < avgStrength * 0.5) {
+    strengthLevel -= 5 // 命局火弱，适应性较强
+    detailedAnalysis += '您的命局中火偏弱，对流年火的适应性较强，影响相对温和。'
+  }
+
+  // 限制强度范围
+  strengthLevel = Math.max(30, Math.min(95, strengthLevel))
+
+  return { type, briefReason, detailedAnalysis, strengthLevel }
 }

@@ -67,10 +67,10 @@ export default function TestPage() {
       console.error('错误详情:', {
         birthInfo: birthInfo,
         situationData: situationData,
-        errorMessage: error?.message,
-        errorStack: error?.stack
+        errorMessage: (error as Error)?.message || String(error),
+        errorStack: (error as Error)?.stack || ''
       })
-      alert(`保存失败: ${error?.message || '未知错误'}`)
+      alert(`保存失败: ${(error as Error)?.message || '未知错误'}`)
     }
   }
 
