@@ -248,6 +248,17 @@ export default function ResultPage() {
   const [resultData, setResultData] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
 
+  const handleRetest = async () => {
+    try {
+      const storage = createClientStorage()
+      await storage.clearAll()
+      router.replace('/test')
+    } catch (error) {
+      console.error('清除数据失败:', error)
+      router.replace('/test')
+    }
+  }
+
   useEffect(() => {
     const loadResult = async () => {
       try {
@@ -345,11 +356,11 @@ export default function ResultPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => window.print()}
+              onClick={handleRetest}
               className="hidden md:flex"
             >
-              <Download className="mr-2 h-4 w-4" />
-              保存报告
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              重新测算
             </Button>
           </div>
         </div>
@@ -384,14 +395,7 @@ export default function ResultPage() {
                 {report.overall.headline}
               </h2>
 
-              {/* 关键词 */}
-              <div className="flex flex-wrap justify-center gap-2">
-                {report.overall.keywords.map((keyword: string, index: number) => (
-                  <Badge key={index} variant="secondary" className="bg-amber-100">
-                    {keyword}
-                  </Badge>
-                ))}
-              </div>
+              {/* 关键词已移除 - 避免误解 */}
 
               {/* 核心建议 */}
               <div className="max-w-2xl mx-auto p-4 bg-amber-50 rounded-lg border border-amber-200">
@@ -759,17 +763,11 @@ export default function ResultPage() {
         <div className="flex justify-center gap-4 pb-8">
           <Button
             variant="outline"
-            onClick={() => window.print()}
-            className="md:hidden"
+            onClick={handleRetest}
           >
-            <Download className="mr-2 h-4 w-4" />
-            保存报告
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            重新测算
           </Button>
-          <Link href="/method">
-            <Button variant="outline">
-              了解更多
-            </Button>
-          </Link>
         </div>
       </main>
     </div>

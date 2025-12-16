@@ -280,7 +280,7 @@ export function SituationForm({ onSubmit, onBack }: SituationFormProps) {
 
             <Alert className="mb-6">
               <AlertDescription>
-                提交后本设备仅允许测评一次，将生成并锁定报告。请确认信息无误后继续。
+                基于传统子平法，系统将为您生成专属的2026丙午流年运势报告。报告包含五行分析、十神特质解读、五大领域运势走向及逐月节气提示。请确认信息无误后继续。
               </AlertDescription>
             </Alert>
 

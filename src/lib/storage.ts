@@ -44,85 +44,52 @@ export class ClientStorage {
     birthInfo: any
     situation: UserContext
   }) {
-    await this.ensureDB()
+    // 备用方案：使用 localStorage
+    try {
+      // 分析命盘
+      const chartProfile = analyzeChart(
+        data.birthInfo.year,
+        data.birthInfo.month,
+        data.birthInfo.day,
+        data.birthInfo.hour,
+        data.birthInfo.minute,
+        data.birthInfo.isHourUnknown
+      )
 
-    // 分析命盘
-    const chartProfile = analyzeChart(
-      data.birthInfo.year,
-      data.birthInfo.month,
-      data.birthInfo.day,
-      data.birthInfo.hour,
-      data.birthInfo.minute,
-      data.birthInfo.isHourUnknown
-    )
+      // 生成报告
+      const report = generateReport(chartProfile, data.situation)
 
-    // 生成报告
-    const report = generateReport(chartProfile, data.situation)
+      const storedData = {
+        attempt_token: 'token_' + Date.now(),
+        result_snapshot: {
+          chartProfile,
+          userContext: data.situation,
+          report
+        },
+        profile_hash: Date.now().toString(),
+        timestamp: Date.now(),
+        version: '1.0.0'
+      }
 
-    // 生成唯一标识
-    const attempt_token = this.generateToken()
-    const profile_hash = this.generateHash(data)
+      // 使用 localStorage 保存
+      localStorage.setItem('fortune2026_result', JSON.stringify(storedData))
 
-    const storedData: StoredData = {
-      attempt_token,
-      result_snapshot: {
-        chartProfile,
-        userContext: data.situation,
-        report
-      },
-      profile_hash,
-      timestamp: Date.now(),
-      version: '1.0.0'
+      return Promise.resolve()
+    } catch (error) {
+      console.error('分析或生成报告时出错:', error)
+      return Promise.reject(error)
     }
-
-    return new Promise<void>((resolve, reject) => {
-      if (!this.db) {
-        reject(new Error('Database not initialized'))
-        return
-      }
-
-      const transaction = this.db.transaction([STORE_NAME], 'readwrite')
-      const store = transaction.objectStore(STORE_NAME)
-      const request = store.add({ ...storedData, id: 'current' })
-
-      request.onerror = () => {
-        reject(new Error('Failed to save data'))
-      }
-
-      request.onsuccess = () => {
-        resolve()
-      }
-    })
   }
 
   async getResult(): Promise<StoredData | null> {
-    await this.ensureDB()
-
-    return new Promise((resolve, reject) => {
-      if (!this.db) {
-        reject(new Error('Database not initialized'))
-        return
-      }
-
-      const transaction = this.db.transaction([STORE_NAME], 'readonly')
-      const store = transaction.objectStore(STORE_NAME)
-      const request = store.get('current')
-
-      request.onerror = () => {
-        reject(new Error('Failed to get data'))
-      }
-
-      request.onsuccess = () => {
-        const result = request.result
-        if (result) {
-          // 移除 id 字段，返回标准的 StoredData 格式
-          const { id, ...storedData } = result
-          resolve(storedData as StoredData)
-        } else {
-          resolve(null)
-        }
-      }
-    })
+    // 备用方案：使用 localStorage
+    try {
+      const data = localStorage.getItem('fortune2026_result')
+      return data ? JSON.parse(data) : null
+    } catch (error) {
+      console.error('获取数据失败:', error)
+      return null
+    }
   }
 
   async hasResult(): Promise<boolean> {
@@ -131,26 +98,14 @@ export class ClientStorage {
   }
 
   async clearAll() {
-    await this.ensureDB()
-
-    return new Promise<void>((resolve, reject) => {
-      if (!this.db) {
-        reject(new Error('Database not initialized'))
-        return
-      }
-
-      const transaction = this.db.transaction([STORE_NAME], 'readwrite')
-      const store = transaction.objectStore(STORE_NAME)
-      const request = store.clear()
-
-      request.onerror = () => {
-        reject(new Error('Failed to clear data'))
-      }
-
-      request.onsuccess = () => {
-        resolve()
-      }
-    })
+    // 备用方案：使用 localStorage
+    try {
+      localStorage.removeItem('fortune2026_result')
+      return Promise.resolve()
+    } catch (error) {
+      console.error('清除数据失败:', error)
+      return Promise.reject(error)
+    }
   }
 
   private generateToken(): string {

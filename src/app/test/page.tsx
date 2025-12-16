@@ -18,26 +18,9 @@ export default function TestPage() {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    // 检查是否已测评
-    const checkExistingTest = async () => {
-      try {
-        const storage = createClientStorage()
-        const hasResult = await storage.hasResult()
-
-        if (hasResult) {
-          // 已有结果，跳转到结果页
-          router.replace('/result')
-          return
-        }
-      } catch (error) {
-        console.error('检查已有结果失败:', error)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    checkExistingTest()
-  }, [router])
+    // 移除测试限制，允许重复测试
+    setIsLoading(false)
+  }, [])
 
   if (isLoading) {
     return (
@@ -57,6 +40,16 @@ export default function TestPage() {
 
   const handleSituationSubmit = async (situationData: any) => {
     try {
+      // 检查 birthInfo 是否存在
+      if (!birthInfo) {
+        console.error('出生信息缺失:', birthInfo)
+        alert('出生信息丢失，请重新填写')
+        setStep(1)
+        return
+      }
+
+      console.log('准备保存数据:', { birthInfo, situationData })
+
       const storage = createClientStorage()
 
       // 保存测评数据
@@ -65,11 +58,19 @@ export default function TestPage() {
         situation: situationData
       })
 
+      console.log('数据保存成功')
+
       // 跳转到结果页
       router.replace('/result')
     } catch (error) {
       console.error('保存测评结果失败:', error)
-      alert('保存失败，请重试')
+      console.error('错误详情:', {
+        birthInfo: birthInfo,
+        situationData: situationData,
+        errorMessage: error?.message,
+        errorStack: error?.stack
+      })
+      alert(`保存失败: ${error?.message || '未知错误'}`)
     }
   }
 
