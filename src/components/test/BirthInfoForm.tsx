@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { CalendarIcon, Clock } from 'lucide-react'
 
@@ -31,6 +31,25 @@ export function BirthInfoForm({ onSubmit }: BirthInfoFormProps) {
 
   const [errors, setErrors] = useState<Record<string, string>>({})
 
+  // 获取指定年月的最大天数
+  const getMaxDaysInMonth = (year: number, month: number) => {
+    return new Date(year, month, 0).getDate()
+  }
+
+  // 检查当前选择的日期是否有效
+  const isCurrentDateValid = () => {
+    const maxDays = getMaxDaysInMonth(birthInfo.year, birthInfo.month)
+    return birthInfo.day <= maxDays
+  }
+
+  // 当年份或月份变化时，自动调整日期
+  useEffect(() => {
+    if (!isCurrentDateValid()) {
+      const maxDays = getMaxDaysInMonth(birthInfo.year, birthInfo.month)
+      setBirthInfo(prev => ({ ...prev, day: Math.min(prev.day, maxDays) }))
+    }
+  }, [birthInfo.year, birthInfo.month])
+
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
 
@@ -40,14 +59,9 @@ export function BirthInfoForm({ onSubmit }: BirthInfoFormProps) {
       newErrors.year = `请输入1900年至${currentYear}年之间的年份`
     }
 
-    // 验证日期
-    const date = new Date(birthInfo.year, birthInfo.month - 1, birthInfo.day)
-    if (
-      date.getFullYear() !== birthInfo.year ||
-      date.getMonth() !== birthInfo.month - 1 ||
-      date.getDate() !== birthInfo.day
-    ) {
-      newErrors.date = '请输入有效的日期'
+    // 验证日期（由于有useEffect保护，这里主要是额外验证）
+    if (!isCurrentDateValid()) {
+      newErrors.date = `选择的日期无效，${birthInfo.year}年${birthInfo.month}月只有${getMaxDaysInMonth(birthInfo.year, birthInfo.month)}天`
     }
 
     // 验证时间（如果时辰已知）
@@ -119,7 +133,7 @@ export function BirthInfoForm({ onSubmit }: BirthInfoFormProps) {
               onChange={(e) => setBirthInfo(prev => ({ ...prev, day: parseInt(e.target.value) }))}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
             >
-              {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
+              {Array.from({ length: getMaxDaysInMonth(birthInfo.year, birthInfo.month) }, (_, i) => i + 1).map(day => (
                 <option key={day} value={day}>{day}日</option>
               ))}
             </select>
